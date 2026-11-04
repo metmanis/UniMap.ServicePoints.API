@@ -1,0 +1,23 @@
+# secrets
+.env
+.env.*
+!.env.example
+launchSettings.json
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+TestResults/
+*.log
+appsettings.Development.local.json
+
+# OS
+.DS_Store
+
+# local tooling
+.superpowers/
+.claude/
