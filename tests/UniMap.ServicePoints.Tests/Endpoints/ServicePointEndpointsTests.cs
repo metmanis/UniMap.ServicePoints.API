@@ -164,7 +164,7 @@ public class ServicePointEndpointsTests(ScratchDatabase db, WebApplicationFactor
     public async Task Filter_options_endpoint_returns_all_five_lists()
     {
         await _seed.City(1, "Ankara", 0, 0, 10, 10);
-        await _seed.District(11, "Çankaya", 0, 0, 5, 10);
+        await _seed.District(11, "Çankaya", 0, 0, 5, 10, cityId: 1);
         await _seed.Brand("Bosch");
         await _seed.Point(1, "A", type: "Authorized");
 
@@ -175,6 +175,7 @@ public class ServicePointEndpointsTests(ScratchDatabase db, WebApplicationFactor
         Assert.Equal("Ankara", json.GetProperty("cities")[0].GetProperty("name").GetString());
         Assert.Equal(1, json.GetProperty("cities")[0].GetProperty("id").GetInt32());
         Assert.Equal("Çankaya", json.GetProperty("districts")[0].GetProperty("name").GetString());
+        Assert.Equal(1, json.GetProperty("districts")[0].GetProperty("cityId").GetInt32());
         Assert.Equal("Bosch", json.GetProperty("brands")[0].GetString());
         Assert.Equal("Authorized", json.GetProperty("types")[0].GetString());
         Assert.Equal(["HeavyDuty", "PassengerCar"], json.GetProperty("vehicleTypes").EnumerateArray().Select(e => e.GetString()));

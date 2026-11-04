@@ -205,17 +205,18 @@ public class ServicePointQuery(NpgsqlDataSource dataSource)
     public async Task<FilterOptions> GetFilterOptionsAsync(CancellationToken ct)
     {
         await using var cmd = dataSource.CreateCommand($"""
-            SELECT 'city', "Id", "Name" FROM "Administrative"."Cities" WHERE "Name" IS NOT NULL
+            SELECT 'city', "Id", "Name", NULL::integer FROM "Administrative"."Cities" WHERE "Name" IS NOT NULL
             UNION ALL
-            SELECT 'district', "Id", "Name" FROM "Administrative"."Districts" WHERE "Name" IS NOT NULL
+            SELECT 'district', "Id", "Name", "CityId" FROM "Administrative"."Districts" WHERE "Name" IS NOT NULL
             UNION ALL
-            SELECT 'brand', 0, "Name" FROM "Brands"."Brands"
+            SELECT 'brand', 0, "Name", NULL FROM "Brands"."Brands"
             UNION ALL
-            SELECT DISTINCT 'type', 0, sp."Type" FROM "Services"."ServicePoints" sp
+            SELECT DISTINCT 'type', 0, sp."Type", NULL::integer FROM "Services"."ServicePoints" sp
             WHERE {Visible} AND sp."Type" IS NOT NULL
             """);
 
-        List<NamedId> cities = [], districts = [];
+        List<NamedId> cities = [];
+        List<DistrictOption> districts = [];
         List<string> brands = [], types = [];
         await using var reader = await cmd.ExecuteReaderAsync(ct);
         while (await reader.ReadAsync(ct))
@@ -224,7 +225,7 @@ public class ServicePointQuery(NpgsqlDataSource dataSource)
             switch (reader.GetString(0))
             {
                 case "city": cities.Add(new NamedId(reader.GetInt32(1), name)); break;
-                case "district": districts.Add(new NamedId(reader.GetInt32(1), name)); break;
+                case "district": districts.Add(new DistrictOption(reader.GetInt32(1), name, reader.IsDBNull(3) ? null : reader.GetInt32(3))); break;
                 case "brand": brands.Add(name); break;
                 default: types.Add(name); break;
             }

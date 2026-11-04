@@ -420,6 +420,19 @@ public class ServicePointQueryTests(ScratchDatabase db) : IClassFixture<ScratchD
         Assert.Equal(["HeavyDuty", "PassengerCar"], o.VehicleTypes);
     }
 
+    [Fact]
+    public async Task Filter_options_say_which_city_each_district_is_in()
+    {
+        await _seed.City(1, "Ankara", 0, 0, 10, 10);
+        await _seed.District(11, "Çankaya", 0, 0, 5, 10, cityId: 1);
+        await _seed.District(12, "Nowhere", 50, 50, 51, 51);
+
+        var o = await _query.GetFilterOptionsAsync(default);
+
+        Assert.Equal(1, o.Districts.Single(d => d.Name == "Çankaya").CityId);
+        Assert.Null(o.Districts.Single(d => d.Name == "Nowhere").CityId);
+    }
+
     private sealed class SuggestionComparer : IEqualityComparer<ServicePointSuggestion>
     {
         public bool Equals(ServicePointSuggestion? a, ServicePointSuggestion? b) =>

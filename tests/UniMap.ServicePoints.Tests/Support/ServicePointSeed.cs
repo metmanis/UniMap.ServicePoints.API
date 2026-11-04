@@ -34,8 +34,8 @@ public class ServicePointSeed(ScratchDatabase db)
     public Task City(int id, string name, double x1, double y1, double x2, double y2) => Exec(
         $"""INSERT INTO "Administrative"."Cities" ("Id", "Name", "Geometry") VALUES ({id}, '{name}', {Rect(x1, y1, x2, y2)})""");
 
-    public Task District(int id, string name, double x1, double y1, double x2, double y2) => Exec(
-        $"""INSERT INTO "Administrative"."Districts" ("Id", "Name", "Geometry") VALUES ({id}, '{name}', {Rect(x1, y1, x2, y2)})""");
+    public Task District(int id, string name, double x1, double y1, double x2, double y2, int? cityId = null) => Exec(
+        $"""INSERT INTO "Administrative"."Districts" ("Id", "Name", "Geometry", "CityId") VALUES ({id}, '{name}', {Rect(x1, y1, x2, y2)}, {(cityId is null ? "NULL" : cityId.ToString())})""");
 
     /// <param name="active">true, false or null (stored as NULL).</param>
     /// <param name="hasGeometry">false stores a NULL geometry.</param>

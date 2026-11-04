@@ -45,9 +45,12 @@ public record ServicePointDetail(
 
 public record NamedId(int Id, string Name);
 
+/// <param name="CityId">Null for a district that lies in no city.</param>
+public record DistrictOption(int Id, string Name, int? CityId);
+
 public record FilterOptions(
     IReadOnlyList<NamedId> Cities,
-    IReadOnlyList<NamedId> Districts,
+    IReadOnlyList<DistrictOption> Districts,
     IReadOnlyList<string> Brands,
     IReadOnlyList<string> Types,
     IReadOnlyList<string> VehicleTypes);
