@@ -7,6 +7,7 @@ using UniMap.ServicePoints.API.Endpoints;
 using UniMap.ServicePoints.API.Gaps;
 using UniMap.ServicePoints.API.Here;
 using UniMap.ServicePoints.API.Isochrones;
+using UniMap.ServicePoints.API.Routes;
 using UniMap.ServicePoints.API.ServicePoints;
 
 if (args.Contains(MigrationRunner.Flag))
@@ -21,6 +22,7 @@ builder.Services.AddHereClient();
 builder.Services.AddIsochrones();
 builder.Services.AddGaps();
 builder.Services.AddDistances();
+builder.Services.AddRoutes();
 builder.Services.AddScoped<ServicePointQuery>();
 builder.Services.AddOptions<BoundaryOptions>()
     .BindConfiguration(BoundaryOptions.SectionName)

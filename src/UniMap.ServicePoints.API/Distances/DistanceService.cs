@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Caching.Memory;
-using NetTopologySuite.Geometries;
 using Npgsql;
 using UniMap.ServicePoints.API.Here;
 using UniMap.ServicePoints.API.ServicePoints;
@@ -34,10 +33,10 @@ public class DistanceService(NpgsqlDataSource dataSource, IHereRoutingClient her
     /// <exception cref="HereUnavailableException">HERE failed. Nothing is cached and no distance is returned.</exception>
     public async Task<double?> GetDrivingDistanceKmAsync(int fromServicePointId, int toServicePointId, CancellationToken ct)
     {
-        var from = await ReadLocationAsync(fromServicePointId, ct);
+        var from = await ServicePointLocationReader.ReadAsync(dataSource, fromServicePointId, ct);
         if (from is null) return null;
         if (fromServicePointId == toServicePointId) return 0;
-        var to = await ReadLocationAsync(toServicePointId, ct);
+        var to = await ServicePointLocationReader.ReadAsync(dataSource, toServicePointId, ct);
         if (to is null) return null;
 
         // The pair is always asked lowest id first, so the cached figure never depends on which direction came first.
@@ -52,17 +51,5 @@ public class DistanceService(NpgsqlDataSource dataSource, IHereRoutingClient her
             throw new HereUnavailableException("HERE returned a distance that is not a finite, non-negative number.");
         cache.Set(key, km);
         return km;
-    }
-
-    private async Task<Coordinate?> ReadLocationAsync(int id, CancellationToken ct)
-    {
-        await using var cmd = dataSource.CreateCommand($"""
-            SELECT ST_X(sp."Geometry"), ST_Y(sp."Geometry")
-            FROM "Services"."ServicePoints" sp
-            WHERE sp."Id" = @id AND {ServicePointQuery.Visible}
-            """);
-        cmd.Parameters.AddWithValue("id", id);
-        await using var reader = await cmd.ExecuteReaderAsync(ct);
-        return await reader.ReadAsync(ct) ? new Coordinate(reader.GetDouble(0), reader.GetDouble(1)) : null;
     }
 }
