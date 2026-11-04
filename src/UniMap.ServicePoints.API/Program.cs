@@ -37,6 +37,7 @@ app.MapServicePointEndpoints();
 app.MapBoundaryEndpoints();
 app.MapGapEndpoints();
 app.MapDistanceEndpoints();
+app.MapRouteEndpoints();
 
 app.Run();
 return 0;
