@@ -60,12 +60,12 @@ public class MigrateCommandTests(BaselineOnlyScratchDatabase db) : IClassFixture
         Assert.True(first.ExitCode == 0, first.Output);
         Assert.Equal(1, await Count("""SELECT count(*) FROM pg_namespace WHERE nspname = 'Brands'"""));
         Assert.Equal(48, await Count("""SELECT count(*) FROM "Brands"."Brands" """));
-        Assert.Equal(6, await Count("""SELECT count(*) FROM "__EFMigrationsHistory" """));
+        Assert.Equal(7, await Count("""SELECT count(*) FROM "__EFMigrationsHistory" """));
 
         var second = await Run(db.ConnectionString);
 
         Assert.True(second.ExitCode == 0, second.Output);
-        Assert.Equal(6, await Count("""SELECT count(*) FROM "__EFMigrationsHistory" """));
+        Assert.Equal(7, await Count("""SELECT count(*) FROM "__EFMigrationsHistory" """));
     }
 
     [Fact]
