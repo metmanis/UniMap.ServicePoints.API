@@ -19,6 +19,7 @@ internal sealed class FakeDistanceHere(double km = 12.5) : IHereRoutingClient
         get { lock (_calls) return _calls.ToArray(); }
     }
 
+    public Task<DrivingRoute> GetDrivingRouteAsync(Coordinate from, Coordinate to, CancellationToken ct) => throw new NotSupportedException();
     public Task<double> GetDrivingDistanceKmAsync(Coordinate from, Coordinate to, CancellationToken ct)
     {
         lock (_calls) _calls.Add((from, to));
