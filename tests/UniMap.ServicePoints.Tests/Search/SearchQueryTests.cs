@@ -95,6 +95,7 @@ public class SearchQueryTests(ScratchDatabase db) : IClassFixture<ScratchDatabas
 
         Assert.Equal(Ids(1), await PointIds("fod"));
         Assert.Empty(await PointIds("fxy"));
+        Assert.Empty(await PointIds("fxd")); // Exactly 2 edits from "ford".
     }
 
     [Fact]
