@@ -16,6 +16,7 @@ public class HereRoutingClient(
 {
     private const string IsolineUrl = "https://isoline.router.hereapi.com/v8/isolines";
     private const string MatrixUrl = "https://matrix.router.hereapi.com/v8/matrix";
+    private const string RouteUrl = "https://router.hereapi.com/v8/routes";
     private const int MaxAttempts = 4; // 1 initial + 3 retries, backoff 1 s, 2 s, 4 s
 
     private static readonly GeometryFactory Factory = new(new PrecisionModel(), 4326);
@@ -67,6 +68,22 @@ public class HereRoutingClient(
         using var json = await SendAsync(
             () => new HttpRequestMessage(HttpMethod.Post, url) { Content = JsonContent.Create(body) }, ct);
         return ParseWellFormed(() => ParseDistanceKm(json.RootElement));
+    }
+
+    public async Task<DrivingRoute> GetDrivingRouteAsync(Coordinate from, Coordinate to, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(from);
+        ArgumentNullException.ThrowIfNull(to);
+
+        var key = RequireKey();
+        // Coordinate.Y is latitude, X is longitude; HERE wants lat,lng. departureTime=any asks for no live traffic.
+        var url = $"{RouteUrl}?transportMode=car&origin={Num(from.Y)},{Num(from.X)}&destination={Num(to.Y)},{Num(to.X)}" +
+                  $"&return=polyline,summary&departureTime=any&apiKey={Uri.EscapeDataString(key)}";
+
+        logger.LogInformation("HERE route request: vehicle {Vehicle}", VehicleType.PassengerCar);
+
+        using var json = await SendAsync(() => new HttpRequestMessage(HttpMethod.Get, url), ct);
+        return ParseWellFormed(() => ParseRoute(json.RootElement));
     }
 
     private string RequireKey()
@@ -210,6 +227,63 @@ public class HereRoutingClient(
         if (!coordinates[0].Equals2D(coordinates[^1]))
             coordinates.Add(coordinates[0].Copy());
         return Factory.CreateLinearRing(coordinates.ToArray());
+    }
+
+    // Reads only each section's polyline, length and duration; everything else in the response is dropped.
+    private static DrivingRoute ParseRoute(JsonElement root)
+    {
+        if (!root.TryGetProperty("routes", out var routes) || routes.ValueKind != JsonValueKind.Array)
+            throw new HereUnavailableException("HERE returned no routes.");
+        if (routes.GetArrayLength() == 0)
+            throw new HereNoRouteException("HERE returned an empty list of routes.");
+
+        if (!routes[0].TryGetProperty("sections", out var sections) || sections.ValueKind != JsonValueKind.Array ||
+            sections.GetArrayLength() == 0)
+            throw new HereUnavailableException("HERE returned a route without sections.");
+
+        var points = new List<Coordinate>();
+        double length = 0;
+        long duration = 0;
+        foreach (var section in sections.EnumerateArray())
+        {
+            if (!section.TryGetProperty("polyline", out var polyline) || polyline.ValueKind != JsonValueKind.String)
+                throw new HereUnavailableException("HERE returned a route section without a polyline.");
+            if (!section.TryGetProperty("summary", out var summary) ||
+                !summary.TryGetProperty("length", out var lengthElement) ||
+                !summary.TryGetProperty("duration", out var durationElement))
+                throw new HereUnavailableException("HERE returned a route section without a summary.");
+
+            var sectionLength = lengthElement.GetDouble();
+            var sectionDuration = durationElement.GetInt64();
+            if (!double.IsFinite(sectionLength) || sectionLength < 0 || sectionDuration < 0)
+                throw new HereUnavailableException("HERE returned a route section with a negative or invalid length or duration.");
+            length += sectionLength;
+            duration += sectionDuration;
+
+            IReadOnlyList<(double Lat, double Lng)> decoded;
+            try
+            {
+                decoded = FlexiblePolyline.Decode(polyline.GetString()!);
+            }
+            catch (FormatException)
+            {
+                throw new HereUnavailableException("HERE returned a route polyline that could not be decoded.");
+            }
+
+            // The decoder yields (lat, lng); coordinates are x = longitude, y = latitude.
+            for (var i = 0; i < decoded.Count; i++)
+            {
+                var point = new Coordinate(decoded[i].Lng, decoded[i].Lat);
+                // Consecutive sections share their junction point; keep it once.
+                if (i == 0 && points.Count > 0 && points[^1].Equals2D(point)) continue;
+                points.Add(point);
+            }
+        }
+
+        if (points.Count < 2 || !double.IsFinite(length) || duration > int.MaxValue)
+            throw new HereUnavailableException("HERE returned a route that is not a usable line.");
+
+        return new DrivingRoute(Factory.CreateLineString(points.ToArray()), length, (int)duration);
     }
 
     private static double ParseDistanceKm(JsonElement root)

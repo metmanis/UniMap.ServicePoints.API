@@ -516,6 +516,146 @@ public class HereRoutingClientTests
         Assert.DoesNotContain(FakeKey, ex.ToString());
     }
 
+    private static readonly Coordinate AnkaraNorth = new(32.86, 39.93);
+
+    private static string RouteJson(string sectionsJson) => $$"""{ "routes": [ { "id": "r", "sections": [ {{sectionsJson}} ] } ] }""";
+
+    [Fact]
+    public async Task Route_request_asks_for_car_polyline_and_summary_without_traffic()
+    {
+        var handler = Ok("route-one-section.json");
+        var (client, _) = Create(handler);
+
+        await client.GetDrivingRouteAsync(Ankara, AnkaraNorth, default);
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Get, request.Method);
+        Assert.Equal("router.hereapi.com", request.Uri.Host);
+        Assert.Equal("/v8/routes", request.Uri.AbsolutePath);
+        var query = request.DecodedQuery;
+        Assert.Contains("transportMode=car", query);
+        // Latitude first, then longitude.
+        Assert.Contains("origin=39.92,32.85", query);
+        Assert.Contains("destination=39.93,32.86", query);
+        Assert.Contains("return=polyline,summary", query);
+        Assert.Contains("departureTime=any", query);
+        Assert.Contains($"apiKey={FakeKey}", query);
+    }
+
+    [Fact]
+    public async Task Route_with_two_sections_is_joined_and_summed()
+    {
+        var (client, _) = Create(Ok("route-two-sections.json"));
+
+        var route = await client.GetDrivingRouteAsync(Ankara, AnkaraNorth, default);
+
+        // The sections share their junction point (39.93, 32.86); it must appear once.
+        Assert.Equal(5, route.Geometry.NumPoints);
+        Assert.Equal(
+            [(32.85, 39.92), (32.855, 39.925), (32.86, 39.93), (32.865, 39.935), (32.87, 39.94)],
+            route.Geometry.Coordinates.Select(c => (Math.Round(c.X, 5), Math.Round(c.Y, 5))).ToArray());
+        Assert.Equal(4326, route.Geometry.SRID);
+        Assert.Equal(4000, route.DistanceMeters);
+        Assert.Equal(720, route.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task Route_keeps_only_geometry_distance_and_duration()
+    {
+        var (client, _) = Create(Ok("route-one-section.json"));
+
+        var route = await client.GetDrivingRouteAsync(Ankara, AnkaraNorth, default);
+
+        Assert.Equal(["DistanceMeters", "DurationSeconds", "Geometry"],
+            typeof(DrivingRoute).GetProperties().Select(p => p.Name).Order().ToArray());
+        Assert.Equal(3, route.Geometry.NumPoints);
+        Assert.Equal(1500, route.DistanceMeters);
+        Assert.Equal(300, route.DurationSeconds);
+    }
+
+    [Fact]
+    public async Task Empty_route_list_throws_HereNoRouteException()
+    {
+        var handler = Ok("route-empty.json");
+        var (client, _) = Create(handler);
+
+        await Assert.ThrowsAsync<HereNoRouteException>(() => client.GetDrivingRouteAsync(Ankara, AnkaraNorth, default));
+
+        Assert.Single(handler.Requests); // an answer, not an outage: no retry
+    }
+
+    public static TheoryData<string> MalformedRoutes => new()
+    {
+        // Section without a polyline.
+        RouteJson("""{ "summary": { "length": 100, "duration": 10 } }"""),
+        // Undecodable polyline.
+        RouteJson("""{ "polyline": "!!!", "summary": { "length": 100, "duration": 10 } }"""),
+        // Fewer than 2 points.
+        RouteJson("""{ "polyline": "BFg80zHwgwoG", "summary": { "length": 100, "duration": 10 } }"""),
+        // Negative length.
+        RouteJson("""{ "polyline": "BFg80zHwgwoGofofofof", "summary": { "length": -1, "duration": 10 } }"""),
+        // Negative duration.
+        RouteJson("""{ "polyline": "BFg80zHwgwoGofofofof", "summary": { "length": 100, "duration": -1 } }"""),
+        // Missing summary.
+        RouteJson("""{ "polyline": "BFg80zHwgwoGofofofof" }"""),
+        // No routes property, and a route without sections.
+        "{}",
+        """{ "routes": [ { "id": "r" } ] }""",
+        // Invalid JSON.
+        "not json {",
+    };
+
+    [Theory]
+    [MemberData(nameof(MalformedRoutes))]
+    public async Task Malformed_route_throws_HereUnavailableException(string body)
+    {
+        var handler = new FakeHereHandler((_, _) => FakeHereHandler.Json(body));
+        var (client, _) = Create(handler);
+
+        var ex = await Assert.ThrowsAsync<HereUnavailableException>(() => client.GetDrivingRouteAsync(Ankara, AnkaraNorth, default));
+
+        Assert.DoesNotContain(FakeKey, ex.Message);
+    }
+
+    [Fact]
+    public async Task Route_retries_then_succeeds()
+    {
+        var handler = new FakeHereHandler((n, _) => n == 1
+            ? FakeHereHandler.Json("{}", HttpStatusCode.ServiceUnavailable)
+            : FakeHereHandler.Json(Fixtures.Read("route-one-section.json")));
+        var (client, delay) = Create(handler);
+
+        var route = await client.GetDrivingRouteAsync(Ankara, AnkaraNorth, default);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Equal([TimeSpan.FromSeconds(1)], delay.Delays);
+        Assert.Equal(1500, route.DistanceMeters);
+    }
+
+    [Fact]
+    public async Task Route_failure_never_contains_the_key()
+    {
+        var logs = new CapturingLoggerProvider();
+        using var factory = LoggerFactory.Create(b => b.SetMinimumLevel(LogLevel.Trace).AddProvider(logs));
+        var handler = new FakeHereHandler((_, _) => FakeHereHandler.Json("{}", HttpStatusCode.InternalServerError));
+        var client = new HereRoutingClient(
+            new HttpClient(handler), Options.Create(new HereOptions { ApiKey = FakeKey }), new RecordingDelay(),
+            factory.CreateLogger<HereRoutingClient>());
+
+        var ex = await Assert.ThrowsAsync<HereUnavailableException>(() => client.GetDrivingRouteAsync(Ankara, AnkaraNorth, default));
+
+        Assert.Equal(4, handler.Requests.Count);
+        Assert.Contains(FakeKey, handler.Requests[0].Uri.Query); // the key really was sent
+        Assert.DoesNotContain(FakeKey, ex.ToString());
+        Assert.NotEmpty(logs.Lines);
+        Assert.All(logs.Lines, l =>
+        {
+            Assert.DoesNotContain(FakeKey, l);
+            Assert.DoesNotContain("apiKey=", l);
+            Assert.DoesNotContain("router.hereapi.com", l);
+        });
+    }
+
     private static string EncodeRing((int Lat, int Lng)[] points)
     {
         const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";

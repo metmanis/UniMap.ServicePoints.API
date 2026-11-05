@@ -54,6 +54,7 @@ internal sealed class ScriptedHere(Func<Coordinate, RangeType, int, Task<MultiPo
         return [new Isoline(rangeValues[0], await answer(origin, rangeType, rangeValues[0]))];
     }
 
+    public Task<DrivingRoute> GetDrivingRouteAsync(Coordinate from, Coordinate to, CancellationToken ct) => throw new NotSupportedException();
     public Task<double> GetDrivingDistanceKmAsync(Coordinate from, Coordinate to, CancellationToken ct) =>
         throw new NotSupportedException();
 }

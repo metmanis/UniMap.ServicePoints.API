@@ -15,7 +15,10 @@ public class ServicePointQuery(NpgsqlDataSource dataSource)
     public const int MaxSearchLength = 100;
 
     // Brand names sort in Turkish order; the comparer falls back to invariant when the culture is unavailable.
-    private static readonly StringComparer NameOrder = StringComparer.Create(new CultureInfo("tr-TR"), ignoreCase: false);
+    internal static readonly StringComparer NameOrder = StringComparer.Create(new CultureInfo("tr-TR"), ignoreCase: false);
+
+    // LIKE patterns: the user's text is escaped so %, _ and \ match literally.
+    internal static string EscapeLike(string text) => text.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
 
     // Active means IsActive IS TRUE (null is not active).
     internal const string Active = """sp."IsActive" IS TRUE""";
@@ -100,8 +103,7 @@ public class ServicePointQuery(NpgsqlDataSource dataSource)
         var normalized = TurkishNormalizer.Normalize(text.Trim());
         if (normalized.Length < MinSearchLength || limit <= 0) return [];
 
-        // LIKE patterns: the user's text is escaped so %, _ and \ match literally.
-        var escaped = normalized.Replace(@"\", @"\\").Replace("%", @"\%").Replace("_", @"\_");
+        var escaped = EscapeLike(normalized);
 
         await using var cmd = dataSource.CreateCommand($"""
             SELECT sp."Id", sp."Code"::text, sp."Name", sp."Type", sp."Address",

@@ -1,0 +1,28 @@
+{
+  "routes": [
+    {
+      "id": "route-1",
+      "sections": [
+        {
+          "id": "s1",
+          "type": "vehicle",
+          "departure": { "time": "2026-11-05T10:00:00+03:00", "place": { "type": "place", "location": { "lat": 39.92, "lng": 32.85 } } },
+          "arrival": { "time": "2026-11-05T10:20:00+03:00", "place": { "type": "place", "location": { "lat": 39.93, "lng": 32.86 } } },
+          "summary": { "duration": 300, "length": 1500, "baseDuration": 300 },
+          "transport": { "mode": "car" },
+          "polyline": "BFg80zHwgwoGofofofof"
+        }
+        ,
+        {
+          "id": "s2",
+          "type": "vehicle",
+          "departure": { "time": "2026-11-05T10:00:00+03:00", "place": { "type": "place", "location": { "lat": 39.92, "lng": 32.85 } } },
+          "arrival": { "time": "2026-11-05T10:20:00+03:00", "place": { "type": "place", "location": { "lat": 39.93, "lng": 32.86 } } },
+          "summary": { "duration": 420, "length": 2500, "baseDuration": 420 },
+          "transport": { "mode": "car" },
+          "polyline": "BFw62zHg_xoGofofofof"
+        }
+      ]
+    }
+  ]
+}

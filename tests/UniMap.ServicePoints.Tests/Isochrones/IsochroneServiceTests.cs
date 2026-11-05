@@ -64,6 +64,7 @@ public sealed class IsochroneServiceTests : IAsyncLifetime
             finally { Interlocked.Decrement(ref _inFlight); }
         }
 
+        public Task<DrivingRoute> GetDrivingRouteAsync(Coordinate from, Coordinate to, CancellationToken ct) => throw new NotSupportedException();
         public Task<double> GetDrivingDistanceKmAsync(Coordinate from, Coordinate to, CancellationToken ct) =>
             throw new NotSupportedException();
     }
@@ -370,6 +371,7 @@ public sealed class IsochroneServiceTests : IAsyncLifetime
     {
         public Task<IReadOnlyList<Isoline>> GetIsolinesAsync(Coordinate o, VehicleType v, RangeType r, IReadOnlyList<int> values, CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<Isoline>>([]);
+        public Task<DrivingRoute> GetDrivingRouteAsync(Coordinate from, Coordinate to, CancellationToken ct) => throw new NotSupportedException();
         public Task<double> GetDrivingDistanceKmAsync(Coordinate from, Coordinate to, CancellationToken ct) => throw new NotSupportedException();
     }
 
@@ -536,6 +538,7 @@ public class IsochroneRegistrationTests
     {
         public Task<IReadOnlyList<Isoline>> GetIsolinesAsync(Coordinate o, VehicleType v, RangeType r, IReadOnlyList<int> values, CancellationToken ct) =>
             throw new NotSupportedException();
+        public Task<DrivingRoute> GetDrivingRouteAsync(Coordinate from, Coordinate to, CancellationToken ct) => throw new NotSupportedException();
         public Task<double> GetDrivingDistanceKmAsync(Coordinate from, Coordinate to, CancellationToken ct) => throw new NotSupportedException();
     }
 
