@@ -10,7 +10,8 @@ public static class CsvGapWriter
 
     public static async Task WriteAsync(Stream output, IAsyncEnumerable<GapExportRow> rows, CancellationToken ct)
     {
-        await using var writer = new StreamWriter(output, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\r\n" };
+        await using var writer = new StreamWriter(output, new UTF8Encoding(false), leaveOpen: true);
+        writer.NewLine = "\r\n";
         await writer.WriteLineAsync(string.Join(',', Columns));
 
         await foreach (var row in rows.WithCancellation(ct))

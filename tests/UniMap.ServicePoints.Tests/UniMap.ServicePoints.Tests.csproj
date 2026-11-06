@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\UniMap.ServicePoints.API\UniMap.ServicePoints.API.csproj" />
+    <ProjectReference Include="..\..\src\UniMap.ServicePoints.API.csproj" />
   </ItemGroup>
 
   <ItemGroup>

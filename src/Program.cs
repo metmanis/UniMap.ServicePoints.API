@@ -33,7 +33,6 @@ builder.Services.AddSingleton<IValidateOptions<BoundaryOptions>, BoundaryOptions
 builder.Services.AddScoped<BoundaryQuery>();
 var app = builder.Build();
 
-app.MapGet("/", () => "Hello World!");
 app.MapConfigEndpoints();
 app.MapServicePointEndpoints();
 app.MapBoundaryEndpoints();
