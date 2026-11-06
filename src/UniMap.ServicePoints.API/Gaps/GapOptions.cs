@@ -5,7 +5,7 @@ public class GapOptions
 {
     public const string SectionName = "Gaps";
 
-    public const double DefaultMaxSpeedKmh = 130;
+    private const double DefaultMaxSpeedKmh = 130;
 
     /// <summary>
     /// Top driving speed used to turn a time threshold into a straight-line search radius.

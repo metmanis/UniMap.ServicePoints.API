@@ -5,7 +5,6 @@ using NetTopologySuite.Geometries;
 using Npgsql;
 using NpgsqlTypes;
 using UniMap.ServicePoints.API.Domain;
-using UniMap.ServicePoints.API.Here;
 using UniMap.ServicePoints.API.Isochrones;
 using UniMap.ServicePoints.API.ServicePoints;
 
@@ -20,7 +19,7 @@ public class GapService(
     IOptions<GapOptions> options,
     ILogger<GapService> logger) : IGapService
 {
-    public const string InsufficientDataMessage = "Not enough spatial data";
+    private const string InsufficientDataMessage = "Not enough spatial data";
 
     /// <summary>Rounds of fetch and calculate before giving up when points keep changing during the calculation.</summary>
     public const int MaxCalculationAttempts = 3;
@@ -130,9 +129,7 @@ public class GapService(
     {
         var errors = new List<string>(GapRequestValidator.Validate(request, limits.Value));
 
-        if (request.Area is null)
-            errors.Add("The area is required.");
-        else if (request.Area.IsEmpty)
+        if (request.Area.IsEmpty)
             errors.Add("The area must not be empty.");
         else if (request.Area.Coordinates.Any(c => !(c.X is >= -180 and <= 180) || !(c.Y is >= -90 and <= 90)))
             errors.Add("The area coordinates must be longitude between -180 and 180 and latitude between -90 and 90.");

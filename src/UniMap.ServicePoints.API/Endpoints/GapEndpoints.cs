@@ -10,7 +10,7 @@ namespace UniMap.ServicePoints.API.Endpoints;
 
 public static class GapEndpoints
 {
-    public const string HereUnavailableMessage =
+    private const string HereUnavailableMessage =
         "The HERE routing service is unavailable, so coverage gaps could not be calculated. No partial result is returned.";
 
     /// <summary>The request and its gaps on success. Otherwise the error response, with nothing else started.</summary>

@@ -14,7 +14,7 @@ public readonly record struct GapCacheKey(
 /// <summary>Successful gap results, per process.</summary>
 public sealed class GapCache : IDisposable
 {
-    public const int MaxEntries = 256;
+    private const int MaxEntries = 256;
 
     private readonly IMemoryCache _cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = MaxEntries });
 

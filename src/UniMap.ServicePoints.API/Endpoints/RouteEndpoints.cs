@@ -5,10 +5,10 @@ namespace UniMap.ServicePoints.API.Endpoints;
 
 public static class RouteEndpoints
 {
-    public const string HereUnavailableMessage =
+    private const string HereUnavailableMessage =
         "The HERE routing service is unavailable, so the route could not be calculated.";
 
-    public const string NoRouteMessage = "HERE found no driving route between these service points.";
+    private const string NoRouteMessage = "HERE found no driving route between these service points.";
 
     public static IEndpointRouteBuilder MapRouteEndpoints(this IEndpointRouteBuilder app)
     {

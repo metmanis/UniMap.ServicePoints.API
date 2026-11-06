@@ -5,7 +5,7 @@ namespace UniMap.ServicePoints.API.Endpoints;
 
 public static class ServicePointEndpoints
 {
-    public const int SuggestionLimit = 10;
+    private const int SuggestionLimit = 10;
 
     public static IEndpointRouteBuilder MapServicePointEndpoints(this IEndpointRouteBuilder app)
     {

@@ -5,7 +5,7 @@ namespace UniMap.ServicePoints.API.Endpoints;
 
 public static class DistanceEndpoints
 {
-    public const string HereUnavailableMessage =
+    private const string HereUnavailableMessage =
         "The HERE routing service is unavailable, so the driving distance could not be calculated.";
 
     public static IEndpointRouteBuilder MapDistanceEndpoints(this IEndpointRouteBuilder app)
